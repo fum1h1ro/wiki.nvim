@@ -22,7 +22,7 @@
 
 ```lua
 -- init.lua に追記
-vim.opt.runtimepath:prepend("~/path/to/wiki.nvim")
+vim.opt.runtimepath:prepend(vim.fn.expand("~/path/to/wiki.nvim"))
 require("wiki").setup({
   root_dir = vim.fn.expand("~/wiki"),
 })
