@@ -7,6 +7,8 @@ M.config = {
   extension = ".md",
   -- ファイルが存在しない場合に自動作成するか
   create_if_missing = true,
+  -- Telescope が利用可能なら使用する（false で常に quickfix）
+  use_telescope = true,
   -- キーマップ
   mappings = {
     follow_link = "<CR>",   -- リンクをたどる
@@ -14,6 +16,13 @@ M.config = {
     create_link = "<Leader>wl", -- ビジュアル選択からリンク作成
   },
 }
+
+--- Telescope が利用可能かチェック
+local function has_telescope()
+  if not M.config.use_telescope then return false end
+  local ok = pcall(require, "telescope")
+  return ok
+end
 
 --- wiki ルートディレクトリを返す
 local function get_root()
@@ -131,6 +140,11 @@ end
 
 --- バックリンク検索: 現在のファイル名を参照しているファイル一覧
 function M.backlinks()
+  if has_telescope() then
+    require("wiki.telescope").backlinks()
+    return
+  end
+
   local current = vim.fn.expand("%:t:r") -- 拡張子なしのファイル名
   local root = get_root()
   local cmd = string.format("grep -rl '\\[\\[%s\\]\\]' %s --include='*.md' 2>/dev/null", current, root)
@@ -184,6 +198,10 @@ function M.setup(opts)
   vim.api.nvim_create_user_command("WikiFrontPage", M.front_page, { desc = "Open FrontPage" })
   vim.api.nvim_create_user_command("WikiBacklinks", M.backlinks, { desc = "Find backlinks to current file" })
   vim.api.nvim_create_user_command("WikiLinks", function()
+    if has_telescope() then
+      require("wiki.telescope").links()
+      return
+    end
     local links = M.list_links()
     if #links == 0 then
       vim.notify("wiki: リンクが見つかりません", vim.log.levels.INFO)
@@ -202,6 +220,20 @@ function M.setup(opts)
     vim.fn.setqflist({}, "a", { title = "Wiki Links" })
     vim.cmd("copen")
   end, { desc = "List all [[links]] in current buffer" })
+  vim.api.nvim_create_user_command("WikiPages", function()
+    if has_telescope() then
+      require("wiki.telescope").pages()
+    else
+      vim.notify("wiki: WikiPages は Telescope が必要です", vim.log.levels.WARN)
+    end
+  end, { desc = "Fuzzy search wiki pages" })
+  vim.api.nvim_create_user_command("WikiGrep", function()
+    if has_telescope() then
+      require("wiki.telescope").grep()
+    else
+      vim.notify("wiki: WikiGrep は Telescope が必要です", vim.log.levels.WARN)
+    end
+  end, { desc = "Live grep in wiki" })
 end
 
 return M
